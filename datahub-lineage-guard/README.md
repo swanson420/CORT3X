@@ -95,7 +95,7 @@ test in the suite does.
 For a given entity, the guard pulls real upstream lineage from DataHub via
 the MCP `get_lineage` tool and compares it against an expected set of
 dependencies. A **removed** dependency (something that used to be there and
-isn't anymore) is treated as the higher-severity finding andhalts the
+isn't anymore) is treated as the higher-severity finding and stops the
 action. An **added** dependency is lower-severity and gets flagged rather
 than blocking, since it may just be legitimate pipeline evolution DataHub
 hasn't caught up to yet. A malformed or empty response is treated as
