@@ -11,7 +11,7 @@ struct TimeReport { uint64_t sender; double offset; uint8_t sig[32]; };
 // called for HSM/Vault-backed signing, which this stub does not implement --
 // but unlike the previous version, this one can actually return false and be
 // tested, rather than being hardcoded to always pass.
-inline bool VerifySignature(uint64_t sender, const uint8_t* payload, const uint8_t* sig) {
+inline bool VerifySignature(uint64_t sender, the uint8_t* payload, const uint8_t* sig) {
     (void)sender; (void)payload;
     uint8_t zero[32] = {0};
     return std::memcmp(sig, zero, 32) != 0;
@@ -30,22 +30,14 @@ public:
     // Plain median of valid (signature-passing) reports, unweighted.
     // Requires at least 2F+1 = 3 valid reports to reach consensus at all.
     // Returns {success, median_offset}.
-    struct Result {
-        bool success;
-        double median;
-        int rejected;
-    };
+    struct Result { bool valid; double median; size_t rejected_count; };
 
-    Result ReachConsensus(const std::vector<TimeReport>& reports) {
+    Result CalculateConsensus(std::vector<TimeReport>& reports) {
         std::vector<double> valid;
-        int rejected = 0;
+        size_t rejected = 0;
 
-        for (const auto& r : reports) {
-            // Signature is checked against the offset bytes (simplified payload).
-            // Real implementation would sign a canonical serialization of the report.
-            uint8_t payload[sizeof(double)];
-            std::memcpy(payload, &r.offset, sizeof(double));
-            if (VerifySignature(r.sender, payload, r.sig)) {
+        for (auto& r : reports) {
+            if (VerifySignature(r.sender, reinterpret_cast<uint8_t*>(&r.offset), r.sig)) {
                 valid.push_back(r.offset);
             } else {
                 rejected++;
