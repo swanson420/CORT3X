@@ -1,0 +1,2 @@
+- [OPA / ajv-cli tooling quirks in this Replit environment](opa-ajv-tooling-in-replit.md) — nix pkg name, Rego v1 syntax default, ajv-cli draft 2020-12 limitation.
+- [PL/pgSQL invalid condition names](plpgsql-invalid-condition-names.md) — "value_error" isn't real; use "data_exception" (catches subclasses by prefix).
