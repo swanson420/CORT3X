@@ -1,0 +1,18 @@
+{
+  "name": "accountability-final",
+  "version": "1.0.1",
+  "description": "",
+  "main": "src/AccountabilityModule.ts",
+  "type": "module",
+  "scripts": {
+    "test": "NODE_ENV=test npx tsx tests/integration-test.ts && npx tsx tests/retention-test.ts && npx tsx tests/encryption-test.ts && npx tsx tests/unarchive-test.ts && npx tsx tests/path-traversal-test.ts && npx tsx tests/chain-integrity-test.ts && npx tsx tests/race-test.ts && npx tsx tests/stress-test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "tsx": "^4.7.0",
+    "@types/node": "^22.0.0"
+  }
+}
