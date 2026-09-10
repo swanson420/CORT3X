@@ -1,0 +1,22 @@
+{
+  "snapshotId": "not-a-real-uuid",
+  "timestamp": "2026-07-09T12:00:00Z",
+  "organizationId": "550e8400-e29b-41d4-a716-446655440001",
+  "contextGraph": {
+    "rootEntityId": "550e8400-e29b-41d4-a716-446655440002",
+    "nodes": [
+      {
+        "nodeId": "550e8400-e29b-41d4-a716-446655440003",
+        "payloadHash": "TOO_SHORT_AND_NOT_HEX",
+        "mimeType": "text/html;<script>alert(1)</script>",
+        "metadata": {}
+      }
+    ]
+  },
+  "pipelineNode": {
+    "promptId": "550e8400-e29b-41d4-a716-446655440004",
+    "promptVersionHash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a0",
+    "targetProvider": "Anthropic",
+    "targetModel": "Claude-3"
+  }
+}
