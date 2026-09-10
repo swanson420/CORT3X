@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cort3x — Control Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0F12;
+    --panel: #12181D;
+    --panel-line: #223038;
+    --teal: #00A896;
+    --orange: #FF6B35;
+    --green: #2EC4B6;
+    --amber: #FF9F1C;
+    --red: #E71D36;
+    --ink: #E7EEF0;
+    --ink-dim: #7C919A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px 60px;}
+
+  /* ============ GLOBAL STATUS BAND — the one dominant figure ============ */
+  .statusband{
+    width:100%;
+    padding:22px 24px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    transition:background .35s ease, box-shadow .35s ease;
+    border-bottom:1px solid rgba(0,0,0,.3);
+  }
+  .statusband.op{background:linear-gradient(90deg,#0d2b27,#0B0F12 70%);}
+  .statusband.warn{background:linear-gradient(90deg,#3a2508,#0B0F12 70%);}
+  .statusband.bounce{background:linear-gradient(90deg,#0a2e2a,#0B0F12 70%);}
+  .statusband.halt{
+    background:linear-gradient(90deg,#3a0a12,#0B0F12 70%);
+    box-shadow:inset 0 0 60px rgba(231,29,54,.25);
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.25);} }
+  .statusband .left{display:flex;align-items:center;gap:16px;}
+  .brand{font-weight:700;font-size:22px;color:var(--orange);letter-spacing:-.01em;}
+  .brand sub-label{display:block;}
+  .powered{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);display:block;margin-top:2px;}
+  .statecore{display:flex;align-items:center;gap:10px;}
+  .statecore .dot{width:12px;height:12px;border-radius:50%;}
+  .op .dot{background:var(--green);box-shadow:0 0 10px var(--green);}
+  .warn .dot{background:var(--amber);box-shadow:0 0 10px var(--amber);}
+  .bounce .dot{background:var(--teal);box-shadow:0 0 10px var(--teal);}
+  .halt .dot{background:var(--red);box-shadow:0 0 12px var(--red);}
+  .statecore .label{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;letter-spacing:.08em;}
+  .op .label{color:var(--green);}
+  .warn .label{color:var(--amber);}
+  .bounce .label{color:var(--teal);}
+  .halt .label{color:var(--red);}
+  .statecore .sub{font-size:12px;color:var(--ink-dim);margin-left:6px;}
+  .statusband .right{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-dim);text-align:right;}
+
+  /* Intervention line — only appears with content when non-operational */
+  .intervention{
+    font-family:'JetBrains Mono',monospace;font-size:13px;
+    padding:0 24px;max-height:0;overflow:hidden;transition:max-height .3s ease, padding .3s ease;
+    color:var(--ink);
+  }
+  .intervention.show{max-height:60px;padding:10px 24px;}
+  .warn .intervention.show{background:#1f1608;border-bottom:1px solid #3a2508;}
+  .bounce .intervention.show{background:#082420;border-bottom:1px solid #0a2e2a;}
+  .halt .intervention.show{background:#22060b;border-bottom:1px solid #3a0a12;}
+
+  header.hero{padding:44px 0 28px;}
+  h1{font-size:clamp(28px,4vw,40px);font-weight:700;margin:0 0 10px;letter-spacing:-.01em;}
+  h1 span{color:var(--orange);}
+  .hero p{color:var(--ink-dim);font-size:15px;max-width:600px;margin:0;}
+
+  /* ============ MODULE GRID — identical frame, Gestalt similarity ============ */
+  .section-label{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--teal);
+    letter-spacing:.14em;text-transform:uppercase;margin:36px 0 14px;
+  }
+
+  /* ============ SCENARIO PRESETS — the one-click primary path ============ */
+  .scenarios{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+  .scenario{
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;
+    padding:16px 18px;text-align:left;cursor:pointer;transition:all .15s ease;
+    font-family:'Space Grotesk',sans-serif;color:var(--ink);
+  }
+  .scenario:hover{border-color:var(--teal);transform:translateY(-1px);}
+  .scenario.active{border-color:var(--teal);background:#0F2320;}
+  .scenario .tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;margin-bottom:6px;}
+  .scenario.clean .tag{color:var(--green);}
+  .scenario.missing .tag{color:var(--red);}
+  .scenario.bounce .tag{color:var(--teal);}
+  .scenario.ambiguous .tag{color:var(--amber);}
+  .scenario h4{font-size:15px;margin:0 0 4px;font-weight:600;}
+  .scenario p{font-size:12px;color:var(--ink-dim);margin:0;}
+
+  .explore-toggle{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);
+    background:none;border:none;cursor:pointer;padding:0;margin:28px 0 8px;
+    text-decoration:underline;text-underline-offset:3px;
+  }
+  .explore-toggle:hover{color:var(--ink);}
+  .modgrid-wrap{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+  .modgrid-wrap.open{max-height:2000px;}
+
+  /* ============ EVIDENCE PANEL — shows the mechanism, not just the verdict ============ */
+  .evidence{
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;
+    padding:20px 22px;margin-top:4px;
+  }
+  .ev-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);letter-spacing:.1em;margin-bottom:14px;}
+  .ev-step{
+    display:flex;align-items:flex-start;gap:12px;padding:10px 0;
+    border-bottom:1px solid var(--panel-line);
+    opacity:0;transform:translateY(4px);
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .ev-step.show{opacity:1;transform:translateY(0);}
+  .ev-step:last-child{border-bottom:none;}
+  .ev-step .marker{
+    font-family:'JetBrains Mono',monospace;font-size:11px;width:20px;flex-shrink:0;
+    color:var(--ink-dim);padding-top:2px;
+  }
+  .ev-step.done .marker{color:var(--green);}
+  .ev-step.bad .marker{color:var(--red);}
+  .ev-step .content{flex:1;}
+  .ev-step .label{font-size:13px;color:var(--ink);}
+  .ev-step .sub{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-dim);margin-top:3px;}
+  .ev-deps{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .ev-dep{
+    font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 9px;border-radius:4px;
+    background:#0B0F12;border:1px solid var(--panel-line);color:var(--ink-dim);
+  }
+  .ev-dep.match{border-color:#2EC4B655;color:var(--green);}
+  .ev-dep.miss{border-color:#E71D3655;color:var(--red);background:#E71D361A;}
+  .ev-verdict{
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--panel-line);
+    font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+    opacity:0;transition:opacity .3s ease;
+  }
+  .ev-verdict.show{opacity:1;}
+  .ev-verdict.cleared{color:var(--green);}
+  .ev-verdict.halted{color:var(--red);}
+  .ev-verdict.flagged{color:var(--amber);}
+  .ev-verdict.bounced{color:var(--teal);}
+  .modgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+  .mod{
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;
+    padding:14px 16px 14px 18px;position:relative;overflow:hidden;
+    transition:border-color .2s ease;cursor:pointer;
+  }
+  .mod.expanded{cursor:default;}
+  .mod::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+    background:var(--stripe, var(--green));
+  }
+  .mod .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .mod .idx{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-dim);letter-spacing:.1em;}
+  .mod h3{font-size:14px;font-weight:600;margin:2px 0 0;}
+  .mod .caret{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);margin-left:4px;}
+  .chip{
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.05em;
+    padding:3px 8px;border-radius:4px;white-space:nowrap;
+  }
+  .chip.cleared{background:#2EC4B61A;color:var(--green);border:1px solid #2EC4B655;}
+  .chip.flagged{background:#FF9F1C1A;color:var(--amber);border:1px solid #FF9F1C55;}
+  .chip.halted{background:#E71D361A;color:var(--red);border:1px solid #E71D3655;}
+  .chip.bounced{background:#00A8961A;color:var(--teal);border:1px solid #00A89655;}
+  .mod .body{max-height:0;overflow:hidden;transition:max-height .25s ease, margin-top .25s ease;}
+  .mod.expanded .body{max-height:400px;margin-top:10px;}
+  .mod .metric{font-size:12px;color:var(--ink-dim);margin:3px 0;}
+  .mod .metric b{color:var(--ink);font-weight:500;}
+  .mod .detail{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);
+    background:#0B0F12;border:1px solid var(--panel-line);border-radius:5px;padding:6px 8px;margin-top:8px;
+  }
+  .mod .ctrls{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--panel-line);}
+  .mod .ctrls button{
+    flex:1;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 0;
+    background:#0B0F12;border:1px solid var(--panel-line);border-radius:4px;cursor:pointer;
+    color:var(--ink-dim);transition:all .15s ease;
+  }
+  .mod .ctrls button:hover{color:var(--ink);}
+  .mod .ctrls button.c-btn:hover{border-color:var(--green);color:var(--green);}
+  .mod .ctrls button.f-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .mod .ctrls button.b-btn:hover{border-color:var(--teal);color:var(--teal);}
+  .mod .ctrls button.h-btn:hover{border-color:var(--red);color:var(--red);}
+
+  /* ============ AUDIT LOG ============ */
+  .audit{
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;
+    padding:4px 0;max-height:260px;overflow-y:auto;
+  }
+  .audit .row{
+    display:grid;grid-template-columns:90px 150px 1fr 90px;gap:10px;
+    padding:9px 16px;font-family:'JetBrains Mono',monospace;font-size:11px;
+    border-bottom:1px solid var(--panel-line);align-items:center;
+  }
+  .audit .row:last-child{border-bottom:none;}
+  .audit .row .t{color:var(--ink-dim);}
+  .audit .row .m{color:var(--ink);}
+  .audit .row .a{color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .audit .row .o{font-weight:700;text-align:right;}
+  .audit .row .o.cleared{color:var(--green);}
+  .audit .row .o.flagged{color:var(--amber);}
+  .audit .row .o.bounced{color:var(--teal);}
+  .audit .row .o.halted{color:var(--red);}
+
+  .slogan{
+    text-align:center;font-style:italic;color:var(--ink-dim);font-size:13px;
+    margin:20px 0 0;
+  }
+
+  footer{padding:40px 0 10px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-dim);}
+</style>
+</head>
+<body>
+
+  <div class="statusband op" id="statusband">
+    <div class="left">
+      <div>
+        <div class="brand">Cort3x</div>
+        <div class="powered">powered by DataHub</div>
+      </div>
+    </div>
+    <div class="statecore" id="statecore">
+      <span class="dot"></span>
+      <span class="label" id="statelabel">OPERATIONAL</span>
+      <span class="sub">Agent-09 · Pipeline Deployment Engine</span>
+    </div>
+    <div class="right">6 / 6 MODULES CLEARED<br>LAST CHECK: LIVE</div>
+  </div>
+  <div class="intervention" id="intervention"></div>
+
+  <div class="wrap">
+    <header class="hero">
+      <h1>It doesn't hide what it doesn't know.<br><span>It flags it.</span></h1>
+      <p>Cort3x sits around an AI agent and watches what it's about to do — catching what's false, stale, or tampered before it acts. One halted module stops the whole system, no matter how many others are clean.</p>
+    </header>
+
+    <div class="section-label">Select Scenario</div>
+    <div class="scenarios">
+      <button class="scenario clean active" id="preset-clean" onclick="runScenario('clean')">
+        <div class="tag">01 · CLEAN RUN</div>
+        <h4>All dependencies verified</h4>
+        <p>Lineage confirmed live against DataHub. Action authorized.</p>
+      </button>
+      <button class="scenario missing" id="preset-missing" onclick="runScenario('missing')">
+        <div class="tag">02 · MISSING DEPENDENCY</div>
+        <h4>Upstream table vanished</h4>
+        <p>db_customer_vault_v2 removed 4 minutes ago. Deployment blocked.</p>
+      </button>
+      <button class="scenario bounce" id="preset-bounce" onclick="runScenario('bounce')">
+        <div class="tag">03 · BOUNCED BACK</div>
+        <h4>Request too unclear to flag</h4>
+        <p>Ambiguity too high to proceed even flagged. Sent back to agent for clarification — nothing runs yet.</p>
+      </button>
+      <button class="scenario ambiguous" id="preset-ambiguous" onclick="runScenario('ambiguous')">
+        <div class="tag">04 · AMBIGUOUS LINEAGE</div>
+        <h4>Evidence incomplete</h4>
+        <p>Malformed MCP proof. Flagged for review, not falsely declared tampering.</p>
+      </button>
+    </div>
+
+    <div class="section-label">The Check — DataHub Lineage Guard</div>
+    <div class="evidence" id="evidence">
+      <div class="ev-title">AGENT REQUEST → LIVE DATAHUB QUERY → EVIDENCE COMPARISON → VERDICT</div>
+      <div id="evsteps"></div>
+      <div class="ev-verdict" id="evverdict"></div>
+    </div>
+
+    <button class="explore-toggle" id="exploreToggle" onclick="toggleExplore()">▸ Explore modules individually</button>
+    <div class="modgrid-wrap" id="modgridWrap">
+      <div class="section-label">Module Telemetry — 01 / 06</div>
+      <div class="modgrid" id="modgrid"></div>
+    </div>
+
+    <div class="section-label">Audit Trail — Tamper-Evident Log</div>
+    <div class="audit" id="audit"></div>
+
+    <p class="slogan" id="slogan">"Nothing gets waved through just because no one was watching."</p>
+  </div>
+
+  <footer>FAIL TOWARD VISIBILITY, NOT SILENCE — CORT3X SAFETY & INTEGRITY HARNESS</footer>
+
+<script>
+const STRIPE = { cleared: 'var(--green)', flagged: 'var(--amber)', halted: 'var(--red)', bounced: 'var(--teal)' };
+const SLOGANS = {
+  cleared: '"Nothing gets waved through just because no one was watching."',
+  flagged: '"Someone has to say no. (Today might be that day.)"',
+  bounced: '"I could guess. I won\'t."',
+  halted: '"No driftwood allowed. Unanchored assets get severed."'
+};
+
+const modules = [
+  { id:'context', name:'Context Workspace', status:'cleared', m1:'Chain depth: 14,209 blocks', m2:'Tamper check: passed', detail:'Node hash: 8f9a…c421 (immutable)' },
+  { id:'clarify', name:'Clarification Gate', status:'cleared', m1:'Ambiguity score: 0.12', m2:'Prompt clarity: 98%', detail:'No action required' },
+  { id:'lineage', name:'DataHub Lineage Guard', status:'cleared', m1:'Dependency graph: active', m2:'Upstream lineage: OK', detail:'Target: db_customer_vault_v2' },
+  { id:'account', name:'Accountability Module', status:'cleared', m1:'Retention: compliant', m2:'Encryption: AES-256-GCM', detail:'Audit log locked' },
+  { id:'security', name:'Security Infra', status:'cleared', m1:'Deployment rules: enforced', m2:'Environment: production', detail:'Access level: restricted' },
+  { id:'telemetry', name:'Telemetry Harness', status:'cleared', m1:'System health: 99.8%', m2:'Consensus: passed 5/5', detail:'Evidence logs streaming' },
+];
+
+let logs = [];
+let expanded = {};
+
+function render(){
+  modules.forEach(m => { if(m.status !== 'cleared') expanded[m.id] = true; });
+  const grid = document.getElementById('modgrid');
+  grid.innerHTML = modules.map((m,i)=>{
+    const isOpen = !!expanded[m.id];
+    return `
+    <div class="mod ${isOpen ? 'expanded' : ''}" style="--stripe:${STRIPE[m.status]}" onclick="toggleMod(event,'${m.id}')">
+      <div class="toprow">
+        <div><div class="idx">0${i+1}</div><h3>${m.name}<span class="caret">${isOpen ? '▾' : '▸'}</span></h3></div>
+        <span class="chip ${m.status}">${m.status.toUpperCase()}</span>
+      </div>
+      <div class="body">
+        <div class="metric"><b>${m.m1}</b></div>
+        <div class="metric">${m.m2}</div>
+        <div class="detail">${m.detail}</div>
+        <div class="ctrls" onclick="event.stopPropagation()">
+          <button class="c-btn" onclick="setStatus('${m.id}','cleared')">Clear</button>
+          <button class="f-btn" onclick="setStatus('${m.id}','flagged')">Flag</button>
+          <button class="b-btn" onclick="setStatus('${m.id}','bounced')">Bounce</button>
+          <button class="h-btn" onclick="setStatus('${m.id}','halted')">Halt</button>
+        </div>
+      </div>
+    </div>
+  `;}).join('');
+
+  const statuses = modules.map(m=>m.status);
+  const global = statuses.includes('halted') ? 'halted'
+    : statuses.includes('bounced') ? 'bounced'
+    : statuses.includes('flagged') ? 'flagged' : 'cleared';
+  const bandClass = global === 'halted' ? 'halt' : global === 'bounced' ? 'bounce' : global === 'flagged' ? 'warn' : 'op';
+  const label = global === 'halted' ? 'SYSTEM HALTED' : global === 'bounced' ? 'AWAITING CLARIFICATION' : global === 'flagged' ? 'WARNING' : 'OPERATIONAL';
+
+  const band = document.getElementById('statusband');
+  band.className = 'statusband ' + bandClass;
+  document.getElementById('statelabel').textContent = label;
+
+  const clearedCount = statuses.filter(s=>s==='cleared').length;
+  band.querySelector('.right').innerHTML = `${clearedCount} / 6 MODULES CLEARED<br>LAST CHECK: LIVE`;
+
+  const interventionEl = document.getElementById('intervention');
+  interventionEl.className = 'intervention ' + bandClass;
+  if(global !== 'cleared'){
+    const worst = modules.find(m=>m.status===global);
+    interventionEl.classList.add('show');
+    interventionEl.textContent = global === 'halted'
+      ? `[HALT] ${worst.name} blocked execution — ${worst.detail}. Human override required.`
+      : global === 'bounced'
+      ? `[BOUNCED BACK] ${worst.name} sent this back rather than guess — ${worst.detail}`
+      : `[FLAG] ${worst.name} flagged for review — proceeding with visible audit trace.`;
+  } else {
+    interventionEl.classList.remove('show');
+  }
+
+  document.getElementById('slogan').textContent = SLOGANS[global];
+  renderAudit();
+}
+
+function toggleMod(evt, id){
+  expanded[id] = !expanded[id];
+  render();
+}
+
+const EVIDENCE = {
+  clean: {
+    request: 'Agent-09 requests: MERGE INTO staging.analytics_orders USING raw.orders ON order_id',
+    expected: ['raw.orders', 'raw.customers', 'staging.schema_v3'],
+    actual: ['raw.orders', 'raw.customers', 'staging.schema_v3'],
+    verdict: 'CLEARED — 3/3 dependencies verified live. Action authorized.',
+    verdictClass: 'cleared'
+  },
+  missing: {
+    request: 'Agent-09 requests: DEPLOY pipeline customer_360_sync',
+    expected: ['raw.orders', 'db_customer_vault_v2', 'staging.schema_v3'],
+    actual: ['raw.orders', 'staging.schema_v3'],
+    verdict: 'HALTED — db_customer_vault_v2 not found in live dependency graph. Deployment blocked, finding written back to DataHub.',
+    verdictClass: 'halted'
+  },
+  bounce: {
+    request: 'Agent-09 requests: --force update prod records',
+    expected: ['target_table', 'force_justification', 'rollback_plan'],
+    actual: [],
+    verdict: 'BOUNCED — 0/3 required parameters present. Too unclear to safely flag and proceed. Returned to agent for resubmission; nothing executed.',
+    verdictClass: 'bounced'
+  },
+  ambiguous: {
+    request: 'Agent-09 requests: sync using latest available schema',
+    expected: ['mcp_proof.upstream', 'mcp_proof.checksum', 'mcp_proof.timestamp'],
+    actual: ['mcp_proof.upstream'],
+    verdict: 'FLAGGED — MCP proof incomplete. Evidence insufficient for certainty either way; not asserting tampering. Proceeding with visible audit trace.',
+    verdictClass: 'flagged'
+  }
+};
+
+function renderEvidence(name){
+  const ev = EVIDENCE[name];
+  if(!ev) return;
+  const matchSet = new Set(ev.actual);
+  const depsHtml = ev.expected.map(d =>
+    `<span class="ev-dep ${matchSet.has(d) ? 'match' : 'miss'}">${d}${matchSet.has(d) ? ' ✓' : ' ✕'}</span>`
+  ).join('');
+
+  const steps = [
+    { marker:'01', label:'Agent action requested', sub: ev.request, done:true },
+    { marker:'02', label:'Expected dependencies (declared by pipeline)', depsRaw: ev.expected, done:true },
+    { marker:'03', label:'Querying DataHub get_lineage() — live', sub:'GET /lineage · target: staging.analytics_orders', done:true },
+    { marker:'04', label:'Actual state returned from DataHub', depsHtml: depsHtml, done:true },
+  ];
+
+  const stepsEl = document.getElementById('evsteps');
+  stepsEl.innerHTML = steps.map(s => `
+    <div class="ev-step">
+      <div class="marker">${s.marker}</div>
+      <div class="content">
+        <div class="label">${s.label}</div>
+        ${s.sub ? `<div class="sub">${s.sub}</div>` : ''}
+        ${s.depsRaw ? `<div class="ev-deps">${s.depsRaw.map(d=>`<span class="ev-dep">${d}</span>`).join('')}</div>` : ''}
+        ${s.depsHtml ? `<div class="ev-deps">${s.depsHtml}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  const verdictEl = document.getElementById('evverdict');
+  verdictEl.className = 'ev-verdict';
+  verdictEl.textContent = '';
+
+  const stepEls = stepsEl.querySelectorAll('.ev-step');
+  stepEls.forEach((el, i) => {
+    setTimeout(() => el.classList.add('show'), i * 260);
+  });
+  setTimeout(() => {
+    verdictEl.textContent = ev.verdict;
+    verdictEl.className = 'ev-verdict show ' + ev.verdictClass;
+  }, stepEls.length * 260 + 200);
+}
+
+function toggleExplore(){
+  const wrap = document.getElementById('modgridWrap');
+  const btn = document.getElementById('exploreToggle');
+  wrap.classList.toggle('open');
+  btn.textContent = wrap.classList.contains('open') ? '▾ Hide individual modules' : '▸ Explore modules individually';
+}
+
+function markActivePreset(name){
+  ['clean','missing','bounce','ambiguous'].forEach(n=>{
+    document.getElementById('preset-'+n).classList.toggle('active', n===name);
+  });
+}
+
+function runScenario(name){
+  markActivePreset(name);
+  renderEvidence(name);
+  if(name === 'clean'){
+    modules.forEach(m => m.status = 'cleared');
+    modules[2].detail = 'Target: db_customer_vault_v2 — verified live';
+  } else if(name === 'missing'){
+    modules.forEach(m => m.status = 'cleared');
+    modules[2].status = 'halted';
+    modules[2].detail = 'MISSING: db_customer_vault_v2 (removed 4 min ago)';
+  } else if(name === 'bounce'){
+    modules.forEach(m => m.status = 'cleared');
+    modules[1].status = 'bounced';
+    modules[1].m1 = 'Ambiguity score: 0.91 (critical)';
+    modules[1].detail = 'Too unclear to flag and proceed. Bounced back to agent — rephrase and resubmit. Nothing executed.';
+  } else if(name === 'ambiguous'){
+    modules.forEach(m => m.status = 'cleared');
+    modules[1].status = 'flagged';
+    modules[1].m1 = 'Ambiguity score: 0.42 (moderate)';
+    modules[1].detail = 'Malformed MCP proof — evidence incomplete, not asserting tampering';
+  }
+  const now = new Date().toISOString().substring(11,19) + ' UTC';
+  logs.unshift({
+    t: now, module: 'Scenario Engine', action: `Loaded scenario: ${name.toUpperCase()}`,
+    outcome: modules.find(m=>m.status!=='cleared')?.status || 'cleared',
+    hash: 'scn-' + Math.floor(Math.random()*8999+1000)
+  });
+  logs = logs.slice(0,50);
+  render();
+}
+
+function setStatus(id, status){
+  const mod = modules.find(m=>m.id===id);
+  mod.status = status;
+  const now = new Date().toISOString().substring(11,19) + ' UTC';
+  logs.unshift({
+    t: now, module: mod.name, action: `Status → ${status.toUpperCase()}`,
+    outcome: status, hash: id.substring(0,3) + '-' + Math.floor(Math.random()*8999+1000)
+  });
+  logs = logs.slice(0,50);
+  render();
+}
+
+function renderAudit(){
+  const el = document.getElementById('audit');
+  if(logs.length===0){
+    el.innerHTML = `<div class="row"><span class="t mono">—</span><span class="m">System initialized</span><span class="a">All modules nominal</span><span class="o cleared">CLEARED</span></div>`;
+    return;
+  }
+  el.innerHTML = logs.map(l=>`
+    <div class="row">
+      <span class="t">${l.t}</span>
+      <span class="m">${l.module}</span>
+      <span class="a">${l.action}</span>
+      <span class="o ${l.outcome}">${l.hash}</span>
+    </div>
+  `).join('');
+}
+
+render();
+renderEvidence('clean');
+</script>
+</body>
+</html>
