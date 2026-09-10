@@ -1,0 +1,60 @@
+name: Tests
+
+"on":
+  push:
+  pull_request:
+
+jobs:
+  offline-tests:
+    name: Offline tests (crypto / validation / orchestration -- no DB)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run DB-less test suite
+        run: python -m pytest tests/ --ignore=tests/test_concurrency.py -v
+        working-directory: context-workspace
+
+  concurrency-tests:
+    name: Concurrency tests (live Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: context_db
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: ci_test_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U admin -d context_db"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      POSTGRES_DB: context_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ci_test_only_password
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+        working-directory: context-workspace
+      - name: Install postgresql-client for schema apply
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply schema
+        run: PGPASSWORD=ci_test_only_password psql -h localhost -U admin -d context_db -f db/schema.sql
+        working-directory: context-workspace
+      - name: Run concurrency tests
+        run: python -m pytest tests/test_concurrency.py -v
+        working-directory: context-workspace
