@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "WorkflowStateSnapshot",
+  "type": "object",
+  "required": ["snapshotId", "timestamp", "organizationId", "contextGraph", "pipelineNode"],
+  "additionalProperties": false,
+  "properties": {
+    "snapshotId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "organizationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "contextGraph": {
+      "type": "object",
+      "required": ["rootEntityId", "nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "rootEntityId": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "nodes": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "required": ["nodeId", "payloadHash", "mimeType", "metadata"],
+            "additionalProperties": false,
+            "properties": {
+              "nodeId": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+              },
+              "payloadHash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "mimeType": {
+                "type": "string",
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*/[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*$"
+              },
+              "metadata": {
+                "type": "object",
+                "maxProperties": 50,
+                "additionalProperties": {
+                  "anyOf": [
+                    { "type": "string", "maxLength": 1000 },
+                    { "type": "number" },
+                    { "type": "boolean" },
+                    { "type": "null" }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pipelineNode": {
+      "type": "object",
+      "required": ["promptId", "promptVersionHash", "targetProvider", "targetModel"],
+      "additionalProperties": false,
+      "properties": {
+        "promptId": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "promptVersionHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "targetProvider": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "targetModel": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    }
+  }
+}
