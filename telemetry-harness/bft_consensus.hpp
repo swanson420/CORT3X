@@ -11,7 +11,7 @@ struct TimeReport { uint64_t sender; double offset; uint8_t sig[32]; };
 // called for HSM/Vault-backed signing, which this stub does not implement --
 // but unlike the previous version, this one can actually return false and be
 // tested, rather than being hardcoded to always pass.
-inline bool VerifySignature(uint64_t sender, the uint8_t* payload, const uint8_t* sig) {
+inline bool VerifySignature(uint64_t sender, uint8_t* payload, const uint8_t* sig) {
     (void)sender; (void)payload;
     uint8_t zero[32] = {0};
     return std::memcmp(sig, zero, 32) != 0;

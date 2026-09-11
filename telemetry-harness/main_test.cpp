@@ -1,5 +1,6 @@
 #include "telemetry_core.hpp"
 #include "bft_allocator.hpp"
+#include "bft_message_pool.hpp"
 #include "bft_consensus.hpp"
 #include "supervisor.hpp"
 #include "alerting.hpp"
