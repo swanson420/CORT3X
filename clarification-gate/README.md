@@ -1,19 +1,19 @@
 # Clarification Gate -- skeleton
 
 **Status: skeleton, verified. Toggle-wiring logic built and tested
-(7/7 passing). Ambiguity judgment itself intentionally stubbed --
+(5/5 passing). Ambiguity judgment itself intentionally stubbed --
 Module 1's real job, not built anywhere in this codebase yet.**
 
 ## Build & run
 
 ```
-python3 -m unittest discover -v
+python3 -m unittest discover -v -s tests -t .
 ```
 
-12 tests: 11 exhaustive/edge-case checks of the toggle wiring, plus 1
-property-based check (2000 generated string inputs, seeded/reproducible,
-hand-rolled -- Hypothesis unavailable offline) confirming input passes
-through to `judge_ambiguity()` completely unmodified.
+5 tests: 4 exhaustive/edge-case checks of the toggle wiring (ON/bounce,
+ON/clear, OFF/clear, OFF/flagged), plus 1 check that `judge_ambiguity()`
+loudly raises `NotImplementedError` rather than silently returning a
+plausible-looking answer.
 
 ## What's actually built
 

@@ -44,7 +44,7 @@ All modules have been independently tested end-to-end (not just unit-tested in i
 | Module | Result |
 |---|---|
 | Context Workspace | 43/43 passed — real Postgres 16, concurrency/hash-chain/immutability tests |
-| Clarification Gate | 12/12 passed — hermetic, pure Python |
+| Clarification Gate | 5/5 passed — hermetic, pure Python |
 | Accountability Module | 7/8 passed — one known, documented flaky stress test (WAL checkpoint timing noise in the sandbox environment, not a data-integrity issue; zero lock errors, zero data loss across runs) |
 | Security Infra | 9/9 SQL constraint tests passed · 24/24 OPA/Rego policy tests passed |
 | Telemetry Harness | 34/34 passed |
