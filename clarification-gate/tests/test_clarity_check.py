@@ -7,37 +7,46 @@ judge_ambiguity is stubbed / injected so the tests remain hermetic.
 import unittest
 from unittest.mock import patch
 
-from clarification_gate.src.engine.clarity_check import (
-    GateOutcome,
+from src.engine.clarity_check import (
+    ClarityResult,
     OFF_MODE_SURFACES_FLAG,
+    AmbiguityJudgment,
     run_clarification_gate,
 )
 
 
+def _judgment(is_ambiguous):
+    return AmbiguityJudgment(is_ambiguous=is_ambiguous)
+
+
 class TestClarificationGateToggle(unittest.TestCase):
     def test_on_ambiguous_bounces(self):
-        with patch("clarification_gate.src.engine.clarity_check.judge_ambiguity", return_value=True):
+        with patch("src.engine.clarity_check.judge_ambiguity",
+                   return_value=_judgment(True)):
             outcome = run_clarification_gate("anything", gate_enabled=True)
-        self.assertEqual(outcome, GateOutcome.BOUNCE_BACK)
+        self.assertEqual(outcome.result, ClarityResult.BOUNCE_BACK)
 
     def test_on_clear_proceeds(self):
-        with patch("clarification_gate.src.engine.clarity_check.judge_ambiguity", return_value=False):
+        with patch("src.engine.clarity_check.judge_ambiguity",
+                   return_value=_judgment(False)):
             outcome = run_clarification_gate("anything", gate_enabled=True)
-        self.assertEqual(outcome, GateOutcome.CLEAR)
+        self.assertEqual(outcome.result, ClarityResult.CLEAR)
 
     def test_off_clear_proceeds(self):
-        with patch("clarification_gate.src.engine.clarity_check.judge_ambiguity", return_value=False):
+        with patch("src.engine.clarity_check.judge_ambiguity",
+                   return_value=_judgment(False)):
             outcome = run_clarification_gate("anything", gate_enabled=False)
-        self.assertEqual(outcome, GateOutcome.CLEAR)
+        self.assertEqual(outcome.result, ClarityResult.CLEAR)
 
     def test_off_ambiguous_flagged_when_surface_flag_true(self):
         self.assertTrue(OFF_MODE_SURFACES_FLAG)
-        with patch("clarification_gate.src.engine.clarity_check.judge_ambiguity", return_value=True):
+        with patch("src.engine.clarity_check.judge_ambiguity",
+                   return_value=_judgment(True)):
             outcome = run_clarification_gate("anything", gate_enabled=False)
-        self.assertEqual(outcome, GateOutcome.FLAGGED_PROCEED)
+        self.assertEqual(outcome.result, ClarityResult.FLAGGED_PROCEED)
 
     def test_judge_ambiguity_raises_not_implemented(self):
-        from clarification_gate.src.engine.clarity_check import judge_ambiguity
+        from src.engine.clarity_check import judge_ambiguity
         with self.assertRaises(NotImplementedError):
             judge_ambiguity("anything")
 
