@@ -24,7 +24,8 @@ All three of the above (encryption, path-traversal defense, chain-integrity) wer
 
 ## Known, honestly documented limitations
 
-- Stress-test WAL-size checkpoint behavior is noisy/bimodal under sustained concurrent load in sandbox environments — documented and gated on, not hidden, but genuinely variable run to run.
+- ~~Stress-test WAL size is noisy/bimodal~~. **Resolved:** the noise came from where the test measured, not from checkpointing. See the "Stress test flake" entry at the end of `VERIFICATION_LOG.md`.
+- `runMaintenance()` still runs `PRAGMA wal_checkpoint(TRUNCATE)` through `.exec()` and discards its busy/log/checkpointed result. The stress test was fixed for exactly this blind spot, but the module wasn't. The stress test also doesn't call `runMaintenance()` at all; it drives its own checkpoints.
 - Key rotation / versioning / envelope encryption is not implemented — a single static key for the module's lifetime.
 - Encryption scope is limited to action payloads, not the full `sessions` table.
 

@@ -778,3 +778,31 @@ Priority order, highest first:
 Nothing in this section has been fixed yet. Per standing methodology,
 these stay flagged and deferred until the batch-fix pass — no inline
 fixes during tracing.
+
+---
+
+## Stress test flake: root cause and gate rewrite (cort3x-ts merge)
+
+**Symptom:** `stress-test.ts` failed about 70% of the time on `WAL size > 500 KB`, typically at 3–4 MB. The log above called this "bimodal sandbox noise".
+
+**Root cause, from an instrumented copy (shared write counter, WAL size sampled after every checkpoint, one extra checkpoint once writers stopped), 9 runs:**
+- The WAL was stat'd once, *after* the last checkpoint but *while all 20 writers were still running*. Each single-row commit appends about 15–19 KB of WAL frames (table page + index pages), so the final size was simply the writes that landed in the 0–500 ms since the last checkpoint. It capped near 4 MB, where SQLite's default auto-checkpoint (1000 pages) wraps the WAL. That's why past failures cluster at 4,039, 4,272 and 4,916 KB.
+- The only passing runs were the 2 with about 20 writes in that trailing window.
+- Every checkpoint that completed (busy=0) left the WAL at 0 KB, and the checkpoint after writers stopped completed and truncated to 0 KB in **9/9** runs. Checkpointing was working the whole time.
+- The 62–73 MB runs recorded above are a different failure: checkpoints starved and the WAL grew without limit. The old gate caught that only by coincidence.
+
+**Second bug: a silent false pass.** On stop, each worker called `postMessage(report)` and then immediately `process.exit(0)`, which can drop the message. With a lost report, `Promise.all` never settles. `runMasterCoordinator()` was a floating promise, so the process could exit **0 with no RESULT line**, and `npm test`'s `&&` chain counts that as a pass. One of the 9 baseline runs printed nothing, which matches this. It did not reproduce in 16 more runs, so this cause is inferred from the code, not observed directly.
+
+**Fix (test only; module code unchanged):**
+- The 500 KB target now applies to the WAL right after each *complete* checkpoint, and after a final checkpoint once writers have stopped. That checkpoint must also complete.
+- A new gate requires the peak WAL size, sampled every 50 ms, to stay under 2x the auto-checkpoint high-water mark. This catches starvation directly.
+- The incomplete-checkpoint ratio gate (>50% fails) is kept.
+- Every worker must report. A worker that exits, crashes or times out without reporting fails the run. The worker no longer calls `process.exit()`.
+- The coordinator's rejection and an event loop that drains before a verdict both exit 1.
+
+**Verified:**
+- Clean: **10/10 PASS**. Max WAL after a complete checkpoint was 0.00–0.03 KB (target 500 KB). Peak under load was 4.2–4.4 MB (ceiling 8.0 MB). The final checkpoint was `{busy:0}`, with the WAL at 0 KB every run.
+- Fault: a reader holding a snapshot open the whole run → **FAIL** on 4 gates: 75% of checkpoints incomplete, 47.7 MB peak, final checkpoint `busy:1`, 47.7 MB WAL after it.
+- Fault: worker 3's report dropped → **FAIL** with `worker 3 exited (code 0) without reporting`.
+
+**Still open:** `runMaintenance()` in the module discards the checkpoint's busy/log/checkpointed result (same blind spot as fix #3 above, in production code this time), and the stress test does not exercise `runMaintenance()`.
