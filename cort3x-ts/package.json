@@ -1,0 +1,30 @@
+{
+  "name": "cort3x-ts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cort3x TypeScript core: accountability module (audit trail) + SCG orchestrator, model-proxy, persistence, db.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-sql.mjs",
+    "test": "npm run test:unit && npm run test:accountability",
+    "test:unit": "tsx --test \"src/**/*.test.ts\"",
+    "test:accountability": "NODE_ENV=test tsx tests/accountability/integration-test.ts && tsx tests/accountability/retention-test.ts && tsx tests/accountability/encryption-test.ts && tsx tests/accountability/unarchive-test.ts && tsx tests/accountability/path-traversal-test.ts && tsx tests/accountability/chain-integrity-test.ts && tsx tests/accountability/race-test.ts && tsx tests/accountability/stress-test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@google/generative-ai": "^0.21.0",
+    "openai": "^4.70.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

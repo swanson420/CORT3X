@@ -31,7 +31,9 @@ cort3x/
 ├── context-workspace/             Module 1 — Python, Postgres-backed
 ├── clarification-gate/            Module 2 — Python
 ├── datahub-lineage-guard/         Module 3 — Python, queries live DataHub via MCP
-├── accountability-module/         Module 4 — TypeScript, SQLite
+├── cort3x-ts/                     TypeScript core (one package, one tsconfig):
+│   ├── src/accountability/        Module 4 — Accountability, SQLite (node:sqlite)
+│   └── src/scg/                   SCG orchestrator, model-proxy, persistence, db (merged from swanson420/SCG)
 ├── security-infra/                Module 5 — Postgres schema/triggers + OPA/Rego policies
 ├── telemetry-harness/             Module 6a — C++, BFT consensus/telemetry
 └── harness-evidence-layer/        Module 6b — C++, hash-chained audit log
@@ -45,7 +47,8 @@ All modules have been independently tested end-to-end (not just unit-tested in i
 |---|---|
 | Context Workspace | 43/43 passed — real Postgres 16, concurrency/hash-chain/immutability tests |
 | Clarification Gate | 5/5 passed — hermetic, pure Python |
-| Accountability Module | 7/8 passed — one known, documented flaky stress test (WAL checkpoint timing noise in the sandbox environment, not a data-integrity issue; zero lock errors, zero data loss across runs) |
+| Accountability Module | 8/8 suites passed on the latest run (in `cort3x-ts/`). The stress test is still a known flake: earlier runs failed only on WAL file size (checkpoint timing noise), never on data integrity, with zero lock errors and zero data loss |
+| SCG core (`cort3x-ts/src/scg`) | 26/26 unit tests passed · strict typecheck clean. Four modules that were never committed to SCG are contract stubs for now. See `cort3x-ts/GAPS.md` |
 | Security Infra | 9/9 SQL constraint tests passed · 24/24 OPA/Rego policy tests passed |
 | Telemetry Harness | 34/34 passed |
 | Harness Evidence Layer | 52/52 passed |
