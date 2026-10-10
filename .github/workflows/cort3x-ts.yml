@@ -1,0 +1,30 @@
+name: cort3x-ts
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: Typecheck, build, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cort3x-ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # node:sqlite needs >= 22.5
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: cort3x-ts/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Accountability suites (integration, retention, encryption, unarchive, path-traversal, chain-integrity, race, stress)
+        run: npm run test:accountability

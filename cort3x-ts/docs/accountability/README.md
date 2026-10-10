@@ -25,7 +25,7 @@ All three of the above (encryption, path-traversal defense, chain-integrity) wer
 ## Known, honestly documented limitations
 
 - ~~Stress-test WAL size is noisy/bimodal~~. **Resolved:** the noise came from where the test measured, not from checkpointing. See the "Stress test flake" entry at the end of `VERIFICATION_LOG.md`.
-- `runMaintenance()` still runs `PRAGMA wal_checkpoint(TRUNCATE)` through `.exec()` and discards its busy/log/checkpointed result. The stress test was fixed for exactly this blind spot, but the module wasn't. The stress test also doesn't call `runMaintenance()` at all; it drives its own checkpoints.
+- `runMaintenance()` now returns its checkpoint outcome (`checkpoint: { busy, log, checkpointed, complete }`) instead of discarding it. A partial checkpoint is reported, not thrown, because it doesn't undo the archive step and is normal under load. `maintenance-checkpoint-test.ts` covers four cases: quiescent, blocked by a reader, recovery, and not in WAL mode. The stress test still drives its own checkpoints rather than calling `runMaintenance()`.
 - Key rotation / versioning / envelope encryption is not implemented — a single static key for the module's lifetime.
 - Encryption scope is limited to action payloads, not the full `sessions` table.
 
@@ -38,7 +38,7 @@ npm install
 npm run test:accountability
 ```
 
-Runs all 8 suites in sequence: integration → retention → encryption → unarchive → path-traversal → chain-integrity → race → stress.
+Runs all 9 suites in sequence: integration → retention → maintenance-checkpoint → encryption → unarchive → path-traversal → chain-integrity → race → stress.
 
 ## License
 
