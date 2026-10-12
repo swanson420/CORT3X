@@ -99,6 +99,26 @@ export interface LogActionParams {
   idempotencyKey?: string;
 }
 
+/** What PRAGMA wal_checkpoint(TRUNCATE) actually did. It never throws on a
+ * partial checkpoint -- it reports one through these columns -- so they
+ * are returned rather than discarded. */
+export interface CheckpointResult {
+  /** 1 if the checkpoint was blocked (a reader or writer held the WAL). */
+  busy: number;
+  /** Frames in the WAL; -1 if the database is not in WAL mode. */
+  log: number;
+  /** Frames copied back into the database; -1 if not in WAL mode. */
+  checkpointed: number;
+  /** True only if every frame was backfilled and the WAL was truncated.
+   * False when blocked, partial, or not in WAL mode (nothing checkpointed). */
+  complete: boolean;
+}
+
+export interface MaintenanceResult {
+  archivedCount: number;
+  checkpoint: CheckpointResult;
+}
+
 export interface AccountabilityModuleConfig {
   dbPath: string;
   /** Required. 32-byte key, hex-encoded (64 hex chars), used for
@@ -465,7 +485,12 @@ export class AccountabilityModule {
     }
   }
 
-  runMaintenance(options: { retentionDays?: number } = {}) {
+  /** Archives closed sessions older than the retention window, then runs a
+   * TRUNCATE checkpoint. A partial checkpoint is normal under concurrent
+   * load and does not undo the archive, so it is reported via
+   * `checkpoint.complete` rather than thrown -- the caller decides whether
+   * to retry, alert, or ignore it. */
+  runMaintenance(options: { retentionDays?: number } = {}): MaintenanceResult {
     const retentionDays = options.retentionDays ?? 30;
     const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
 
@@ -478,9 +503,20 @@ export class AccountabilityModule {
     `);
     const result = archiveStmt.run(cutoff);
 
-    this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+    const row = this.db.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as
+      | { busy: number; log: number; checkpointed: number }
+      | undefined;
+    if (!row) {
+      throw new Error("PRAGMA wal_checkpoint(TRUNCATE) returned no row; checkpoint outcome unknown.");
+    }
+    const checkpoint: CheckpointResult = {
+      busy: row.busy,
+      log: row.log,
+      checkpointed: row.checkpointed,
+      complete: row.busy === 0 && row.log >= 0 && row.checkpointed === row.log,
+    };
 
-    return { archivedCount: result.changes };
+    return { archivedCount: Number(result.changes), checkpoint };
   }
 
   close() {

@@ -805,4 +805,26 @@ fixes during tracing.
 - Fault: a reader holding a snapshot open the whole run → **FAIL** on 4 gates: 75% of checkpoints incomplete, 47.7 MB peak, final checkpoint `busy:1`, 47.7 MB WAL after it.
 - Fault: worker 3's report dropped → **FAIL** with `worker 3 exited (code 0) without reporting`.
 
-**Still open:** `runMaintenance()` in the module discards the checkpoint's busy/log/checkpointed result (same blind spot as fix #3 above, in production code this time), and the stress test does not exercise `runMaintenance()`.
+**Still open (at the time):** `runMaintenance()` in the module discarded the checkpoint's busy/log/checkpointed result. Fixed in the next entry. The stress test still does not exercise `runMaintenance()`.
+
+---
+
+## runMaintenance() checkpoint result is no longer discarded
+
+**Problem:** `runMaintenance()` ran `PRAGMA wal_checkpoint(TRUNCATE)` through `.exec()`, which throws away the result. A blocked or partial checkpoint was therefore invisible to the caller. This is the same blind spot as fix #3 in the stress test, but in production code.
+
+**Fix:** it now returns `{ archivedCount, checkpoint: { busy, log, checkpointed, complete } }`. This is additive, so existing callers that read `archivedCount` are unaffected.
+- `complete` is true only when `busy=0`, `log >= 0` and every frame was checkpointed.
+- Outside WAL mode, SQLite reports `-1/-1` and nothing is checkpointed, so `complete` is false there. That case must not read as success.
+- A partial checkpoint is reported, not thrown. The archive UPDATE has already committed, and partials are normal under concurrent load (see the stress-test entry above).
+
+**Verified:** `tests/accountability/maintenance-checkpoint-test.ts` covers four cases:
+
+| Case | Result |
+|---|---|
+| Quiescent | `complete:true`, WAL truncated to 0 bytes |
+| A reader pins an old snapshot | `busy:1, log:9, checkpointed:0, complete:false`; the WAL was not truncated, and the archive still committed and was reported |
+| Reader released | `complete:true`, WAL at 0 |
+| Not in WAL mode | `log:-1, complete:false` |
+
+Two mutants were caught: `complete` ignoring `busy`/`log`, and a naive `complete = busy === 0`.

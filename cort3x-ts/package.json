@@ -13,7 +13,7 @@
     "build": "tsc -p tsconfig.build.json && node scripts/copy-sql.mjs",
     "test": "npm run test:unit && npm run test:accountability",
     "test:unit": "tsx --test \"src/**/*.test.ts\"",
-    "test:accountability": "NODE_ENV=test tsx tests/accountability/integration-test.ts && tsx tests/accountability/retention-test.ts && tsx tests/accountability/encryption-test.ts && tsx tests/accountability/unarchive-test.ts && tsx tests/accountability/path-traversal-test.ts && tsx tests/accountability/chain-integrity-test.ts && tsx tests/accountability/race-test.ts && tsx tests/accountability/stress-test.ts"
+    "test:accountability": "NODE_ENV=test tsx tests/accountability/integration-test.ts && tsx tests/accountability/retention-test.ts && tsx tests/accountability/maintenance-checkpoint-test.ts && tsx tests/accountability/encryption-test.ts && tsx tests/accountability/unarchive-test.ts && tsx tests/accountability/path-traversal-test.ts && tsx tests/accountability/chain-integrity-test.ts && tsx tests/accountability/race-test.ts && tsx tests/accountability/stress-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",
