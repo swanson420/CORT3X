@@ -828,3 +828,30 @@ fixes during tracing.
 | Not in WAL mode | `log:-1, complete:false` |
 
 Two mutants were caught: `complete` ignoring `busy`/`log`, and a naive `complete = busy === 0`.
+
+---
+
+## Stress test: peak WAL size is reported, no longer gated
+
+**Symptom:** On PR #13's first CI run, the stress test failed only on `WAL peaked at 98272.49 KB, over the 8046.91 KB ceiling`. That PR didn't touch accountability code. A re-run of the same commit passed with a 4.5 MB peak, and `main` passed the same check at 4.3 MB. That makes 1 failure in 4 GitHub runs.
+
+**What the failing run showed:** checkpointing was healthy.
+- 9 of 10 checkpoints completed.
+- 0 frames were left unchecked.
+- The WAL was 0 KB after every complete checkpoint.
+- The final checkpoint completed.
+
+The WAL spiked between two successful checkpoints and was then fully truncated. That run was also slower than the passing ones: 10 checkpoints instead of 19, and 15 lock errors instead of 0. That suggests a TRUNCATE checkpoint waiting on its 5-second busy timeout while writes kept piling up. This is not reproduced: 4 local runs pinned to 2 CPUs peaked at 4.2–4.6 MB.
+
+**Why the gate was wrong:** the 2x auto-checkpoint ceiling was a threshold set in the earlier stress-test entry, calibrated on one machine. Peak size is roughly write rate x checkpoint latency, so it measures the runner rather than whether checkpointing works.
+
+**Fix:** peak WAL size is now printed (absolute and as a multiple of the auto-checkpoint size) but no longer fails the run. These gates are unchanged:
+- WAL under 500 KB after each complete checkpoint.
+- No more than 50% of checkpoints incomplete.
+- The final checkpoint completes, with the WAL under 500 KB after it.
+- Every worker reports, and there are no unexpected write errors.
+
+**Verified:**
+- Clean: 3 of 3 runs pass, with peaks of 4.3–4.6 MB (1.1x auto-checkpoint).
+- Stale-reader fault (a reader pinning a snapshot for the whole run): **still FAILS**. The final checkpoint returns `{busy:1, log:361, checkpointed:0}`, and the WAL is 1.4 MB after it.
+- Caveat: in that fault run only 3 of 8 checkpoints were partial (37%), under the 50% threshold, so the final-checkpoint gates caught it alone. A long reader that releases *before* the run ends would therefore only be caught if more than half the checkpoints were partial.
