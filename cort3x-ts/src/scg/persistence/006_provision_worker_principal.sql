@@ -31,12 +31,33 @@
 --     already exist (created through whatever tenant-onboarding path
 --     exists elsewhere; not this codebase's concern yet).
 
+-- Usage:
+--   psql -v ON_ERROR_STOP=1 -v worker_issuer=... -v worker_subject=... \
+--        -v tenant_slug=... -f 006_provision_worker_principal.sql
+--
+-- psql does not substitute :'var' inside a dollar-quoted DO block -- the
+-- original version put :'worker_issuer' there and was a syntax error on
+-- every run. The values are copied into transaction-local settings out
+-- here, where psql does substitute them, and read back inside the block.
+-- A missing -v leaves its setting unset, which the NULL check reports.
+\set ON_ERROR_STOP 1
+BEGIN;
+\if :{?worker_issuer}
+SELECT set_config('scg.worker_issuer', :'worker_issuer', true);
+\endif
+\if :{?worker_subject}
+SELECT set_config('scg.worker_subject', :'worker_subject', true);
+\endif
+\if :{?tenant_slug}
+SELECT set_config('scg.tenant_slug', :'tenant_slug', true);
+\endif
+
 DO $$
 DECLARE
-    -- ---- deployer-supplied values -----------------------------------
-    v_issuer          TEXT := :'worker_issuer';   -- e.g. 'spiffe://cluster.local'
-    v_subject         TEXT := :'worker_subject';  -- e.g. '/ns/prod/sa/scg-worker'
-    v_tenant_slug     TEXT := :'tenant_slug';      -- must already exist in tenants
+    -- ---- deployer-supplied values (see Usage above) -------------------
+    v_issuer          TEXT := NULLIF(current_setting('scg.worker_issuer', true), '');   -- e.g. 'spiffe://cluster.local'
+    v_subject         TEXT := NULLIF(current_setting('scg.worker_subject', true), '');  -- e.g. '/ns/prod/sa/scg-worker'
+    v_tenant_slug     TEXT := NULLIF(current_setting('scg.tenant_slug', true), '');     -- must already exist in tenants
     -- -------------------------------------------------------------------
     v_principal_id    UUID;
     v_tenant_id       UUID;
@@ -70,3 +91,5 @@ BEGIN
     RAISE NOTICE 'Provisioned worker principal % (issuer=%, subject=%) with node.execute in tenant % (%).',
         v_principal_id, v_issuer, v_subject, v_tenant_slug, v_tenant_id;
 END $$;
+
+COMMIT;
