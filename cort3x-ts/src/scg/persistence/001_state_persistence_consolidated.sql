@@ -138,11 +138,15 @@ CREATE TRIGGER trg_check_node_tenant
 
 -- Application role. Per 006: SELECT only on the identity tables; principal
 -- provisioning is a control-plane act done by the owner/migration role.
+-- Roles are cluster-wide, so two databases migrating at once can race
+-- here. Check-then-create loses that race (seen in CI as both errors
+-- below), so just create and treat "someone else already did" as success.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'state_app') THEN
-        CREATE ROLE state_app NOLOGIN;
-    END IF;
+    CREATE ROLE state_app NOLOGIN;
+EXCEPTION
+    WHEN duplicate_object OR unique_violation THEN
+        NULL; -- role already exists (sequentially: duplicate_object; concurrently: unique_violation on pg_authid)
 END $$;
 
 GRANT SELECT ON tenants, principals, principal_tenant_memberships TO state_app;
