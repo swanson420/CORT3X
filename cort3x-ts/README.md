@@ -18,7 +18,8 @@ npm run typecheck          # tsc --noEmit over src/ and tests/
 npm test                   # unit tests (node:test) + the 8 accountability suites
 npm run test:unit          # just src/**/*.test.ts
 npm run test:accountability
+TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres npm run test:pg   # needs a Postgres where this role can CREATE DATABASE, plus psql on PATH
 npm run build              # -> dist/ (copies .sql files alongside)
 ```
 
-Some of what SCG imports was never committed. Those pieces are contract stubs here and are listed in [GAPS.md](GAPS.md).
+Some of what SCG imports was never committed. Those pieces are rebuilt here for what current callers need; [GAPS.md](GAPS.md) lists every assumption and everything still unbuilt.

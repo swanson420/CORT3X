@@ -41,7 +41,7 @@ cort3x/
 
 ## Test status
 
-`cort3x-ts/` runs in GitHub Actions (`.github/workflows/cort3x-ts.yml`) on every PR and every push to `main`: typecheck, build, unit tests, and all accountability suites. The other modules' tests are run by hand; `context-workspace/.github/workflows/tests.yml` sits in a subfolder, so GitHub never runs it.
+`cort3x-ts/` runs in GitHub Actions (`.github/workflows/cort3x-ts.yml`) on every PR and every push to `main`: typecheck, build, unit tests, all accountability suites, and a Postgres 16 integration job. The other modules' tests are run by hand; `context-workspace/.github/workflows/tests.yml` sits in a subfolder, so GitHub never runs it.
 
 All modules have been independently tested end-to-end (not just unit-tested in isolation):
 
@@ -50,7 +50,7 @@ All modules have been independently tested end-to-end (not just unit-tested in i
 | Context Workspace | 43/43 passed — real Postgres 16, concurrency/hash-chain/immutability tests |
 | Clarification Gate | 5/5 passed — hermetic, pure Python |
 | Accountability Module | 9/9 suites passed (in `cort3x-ts/`), including the new `runMaintenance()` checkpoint-reporting test. The stress test no longer flakes: its WAL gate measured a timing window, not checkpoint health. The rewritten gate went 10/10 on clean runs and fails on both injected faults (starved checkpoints, a lost worker report). See `cort3x-ts/docs/accountability/VERIFICATION_LOG.md` |
-| SCG core (`cort3x-ts/src/scg`) | 70/70 unit tests passed (44 of them cover model-proxy: classifier against real SDK error classes, all 3 adapters, runner) · strict typecheck clean. Four modules that were never committed to SCG are contract stubs for now. See `cort3x-ts/GAPS.md` |
+| SCG core (`cort3x-ts/src/scg`) | 79/79 unit tests + 29/29 Postgres 16 integration tests (`npm run test:pg`, own CI job) · strict typecheck clean. The four modules that were never committed to SCG, and their `001` schema, are rebuilt for what current callers need; every assumption and every unbuilt piece is listed in `cort3x-ts/GAPS.md` |
 | Security Infra | 9/9 SQL constraint tests passed · 24/24 OPA/Rego policy tests passed |
 | Telemetry Harness | 34/34 passed |
 | Harness Evidence Layer | 52/52 passed |
