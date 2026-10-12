@@ -86,6 +86,7 @@ export class AnthropicProviderAdapter implements IModelProviderAdapter {
             response: finalMessageState,
             error: caughtError,
             headers: capturedHeaders,
+            aborted: abortSignal?.aborted ?? false,
           },
           elapsedMs
         );
@@ -111,7 +112,8 @@ export class AnthropicProviderAdapter implements IModelProviderAdapter {
       const errorDetail = ProviderErrorClassifier.classify(
         rawResult.error,
         elapsedMs,
-        responseHeaders
+        responseHeaders,
+        { aborted: rawResult.aborted }
       );
 
       return {

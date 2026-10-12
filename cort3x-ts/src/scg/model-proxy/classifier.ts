@@ -1,21 +1,38 @@
 import { ExecutionErrorDetail, RawTransportHeaders } from './types.js';
 
 export class ProviderErrorClassifier {
+  /**
+   * `context.aborted` is whether the caller's AbortSignal had fired. It is
+   * the reliable abort test: the SDKs do not agree on an abort error shape
+   * (Anthropic/OpenAI throw APIUserAbortError with name "Error"; Gemini
+   * wraps the fetch AbortError in a generic GoogleGenerativeAIError), so
+   * an abort used to fall through to protocol_violation.
+   */
   static classify(
     error: unknown,
     elapsedMs: number,
-    headers?: RawTransportHeaders
+    headers?: RawTransportHeaders,
+    context: { aborted?: boolean } = {}
   ): ExecutionErrorDetail {
     const err = error as Record<string, any> | undefined;
     const status = Number(err?.status || err?.statusCode || 0);
     const rawCode = String(err?.code || err?.error?.code || err?.type || '').toUpperCase();
-    const rawType = String(err?.error?.type || err?.type || '').toLowerCase();
+    // Anthropic nests the error type one level deeper than OpenAI:
+    // { type: 'error', error: { type: 'invalid_request_error' } }.
+    const rawType = String(err?.error?.error?.type || err?.error?.type || err?.type || '').toLowerCase();
+    const errorClass = String(err?.constructor?.name || '');
+    const causeCode = String(err?.cause?.code || '').toUpperCase();
     const message = String(err?.message || err?.error?.message || 'Actuator transmission fault');
     const msgLower = message.toLowerCase();
 
     const activeHeaders: RawTransportHeaders | undefined = headers || err?.headers;
 
-    if (rawCode === 'ABORT_ERR' || err?.name === 'AbortError') {
+    if (
+      context.aborted ||
+      rawCode === 'ABORT_ERR' ||
+      err?.name === 'AbortError' ||
+      errorClass === 'APIUserAbortError'
+    ) {
       return {
         category: 'client_aborted',
         message: 'Execution cycle halted by supervisory signal.',
@@ -31,7 +48,9 @@ export class ProviderErrorClassifier {
         message: 'Actuator rate or quota ceiling reached.',
         code: rawCode || '429',
         failedAtMs: elapsedMs,
-        retryable: true,
+        // OpenAI's insufficient_quota is a billing limit, not a rate
+        // window: retrying cannot succeed until someone adds credit.
+        retryable: rawCode !== 'INSUFFICIENT_QUOTA',
         diagnostics: this.extractRateLimitDiagnostics(activeHeaders),
       };
     }
@@ -108,8 +127,15 @@ export class ProviderErrorClassifier {
       }
     }
 
+    // Anthropic/OpenAI raise APIConnectionError (no status, no code) when
+    // the request never got a response; the socket error is on .cause.
+    const isNetworkCode = (c: string) =>
+      c === 'ECONNRESET' || c === 'ECONNREFUSED' || c === 'ETIMEDOUT' || c === 'UND_ERR_CONNECT_TIMEOUT' || c === 'EAI_AGAIN';
     if (
       status >= 500 ||
+      errorClass === 'APIConnectionError' ||
+      errorClass === 'APIConnectionTimeoutError' ||
+      isNetworkCode(causeCode) ||
       rawCode === 'ECONNRESET' ||
       rawCode === 'ETIMEDOUT' ||
       rawCode === 'UND_ERR_CONNECT_TIMEOUT' ||

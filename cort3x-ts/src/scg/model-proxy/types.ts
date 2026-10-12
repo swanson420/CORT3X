@@ -98,6 +98,8 @@ export interface RawExecutionResult {
   readonly response?: any;
   readonly error?: unknown;
   readonly headers?: RawTransportHeaders;
+  /** Whether the caller's AbortSignal had fired when the error was caught. */
+  readonly aborted?: boolean;
 }
 
 export interface DispatchedExecution {

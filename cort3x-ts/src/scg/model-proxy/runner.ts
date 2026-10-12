@@ -18,6 +18,20 @@ export interface ExecutionEventStream {
   }>;
 }
 
+/** Thrown to a tokenStream reader that fell more than OBSERVER_QUEUE_LIMIT
+ * chunks behind. The backend keeps going and `completion` still carries
+ * the full artifact -- only the live tap is cut off, and it is cut off
+ * loudly rather than left waiting for chunks that will never arrive. */
+export class ObserverOverflowError extends Error {
+  readonly code = 'OBSERVER_OVERFLOW';
+  constructor(limit: number) {
+    super(`tokenStream reader fell more than ${limit} chunks behind and was detached; read the full output from completion.`);
+    this.name = 'ObserverOverflowError';
+  }
+}
+
+const OBSERVER_QUEUE_LIMIT = 100;
+
 export class NodeExecutionRunner {
   constructor(private readonly adapterFactory: ProviderAdapterFactory) {}
 
@@ -43,22 +57,28 @@ export class NodeExecutionRunner {
       | { type: 'done' }
       | { type: 'error'; error: unknown };
 
+    // Items are buffered from the start, not only once a reader attaches:
+    // a reader that attached after the stream ended used to find no 'done'
+    // item and wait forever. The buffer is bounded either way.
     const queue: QueueItem[] = [];
     let pendingReaderResolve: ((item: QueueItem) => void) | null = null;
-    let observerAttached = false;
     let observerDetached = false;
 
     function pushToObserver(item: QueueItem) {
-      if (!observerAttached || observerDetached) return;
+      if (observerDetached) return;
 
       if (pendingReaderResolve) {
         const resolve = pendingReaderResolve;
         pendingReaderResolve = null;
         resolve(item);
       } else {
-        if (queue.length >= 100) {
+        if (queue.length >= OBSERVER_QUEUE_LIMIT) {
+          // Replace the backlog with a terminal error. Previously the
+          // backlog was silently cleared and the reader then waited on
+          // chunks that would never be delivered.
           observerDetached = true;
           queue.length = 0;
+          queue.push({ type: 'error', error: new ObserverOverflowError(OBSERVER_QUEUE_LIMIT) });
           return;
         }
         queue.push(item);
@@ -104,8 +124,6 @@ export class NodeExecutionRunner {
 
     // 2. Observer Tap Generator (Lazy)
     async function* createObserverStream(): AsyncIterable<string> {
-      observerAttached = true;
-
       try {
         while (true) {
           const item: QueueItem = queue.length > 0
