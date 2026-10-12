@@ -92,6 +92,7 @@ export class GeminiProviderAdapter implements IModelProviderAdapter {
             response: finalResponseObj,
             error: caughtError,
             headers: capturedHeaders,
+            aborted: abortSignal?.aborted ?? false,
           },
           elapsedMs
         );
@@ -117,7 +118,8 @@ export class GeminiProviderAdapter implements IModelProviderAdapter {
       const errorDetail = ProviderErrorClassifier.classify(
         rawResult.error,
         elapsedMs,
-        responseHeaders
+        responseHeaders,
+        { aborted: rawResult.aborted }
       );
 
       return {

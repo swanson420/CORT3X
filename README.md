@@ -50,7 +50,7 @@ All modules have been independently tested end-to-end (not just unit-tested in i
 | Context Workspace | 43/43 passed — real Postgres 16, concurrency/hash-chain/immutability tests |
 | Clarification Gate | 5/5 passed — hermetic, pure Python |
 | Accountability Module | 9/9 suites passed (in `cort3x-ts/`), including the new `runMaintenance()` checkpoint-reporting test. The stress test no longer flakes: its WAL gate measured a timing window, not checkpoint health. The rewritten gate went 10/10 on clean runs and fails on both injected faults (starved checkpoints, a lost worker report). See `cort3x-ts/docs/accountability/VERIFICATION_LOG.md` |
-| SCG core (`cort3x-ts/src/scg`) | 26/26 unit tests passed · strict typecheck clean. Four modules that were never committed to SCG are contract stubs for now. See `cort3x-ts/GAPS.md` |
+| SCG core (`cort3x-ts/src/scg`) | 70/70 unit tests passed (44 of them cover model-proxy: classifier against real SDK error classes, all 3 adapters, runner) · strict typecheck clean. Four modules that were never committed to SCG are contract stubs for now. See `cort3x-ts/GAPS.md` |
 | Security Infra | 9/9 SQL constraint tests passed · 24/24 OPA/Rego policy tests passed |
 | Telemetry Harness | 34/34 passed |
 | Harness Evidence Layer | 52/52 passed |
